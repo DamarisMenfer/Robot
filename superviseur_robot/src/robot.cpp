@@ -1,3 +1,4 @@
+#include "monitor.h"
 #include "robot.h"
 
 int fd;
@@ -7,6 +8,9 @@ int readSerial(char * msg);
 char checkSumGO(char * msg);
 int receiveMsg(void);
 int sendCmd(char cmd, const char * arg);
+
+// Medium loss counter
+int comm_loss_cnt = 0;
 
 int open_communication_robot(const char * path)
 {
@@ -49,9 +53,23 @@ int close_communication_robot(void)
 int send_command_to_robot(char cmd, const char * arg)
 {
 #ifndef __STUB__
-    sendCmd(cmd,arg);
-    // TODO : check return from sendCmd
-    return receiveMsg();
+    int ret1 = sendCmd(cmd,arg);
+    int ret2 = receiveMsg();
+
+    // Check return
+    if (ret1 == -1 || ret2 == ROBOT_TIMED_OUT)
+        comm_loss_cnt++;
+    else
+        comm_loss_cnt = 0;
+
+    // Handle medium loss
+    if (comm_loss_cnt > 3) {
+        // Send message to monitor
+        send_message_to_monitor(HEADER_STM_MES, "Communication lost");
+        close_communication_robot();
+        //TODO: reopen communication?
+    }
+    return ret2;
 #else
     int reponse;
     switch(cmd)
