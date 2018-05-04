@@ -1,0 +1,28 @@
+@startuml
+(*) --> "ServerOk?"
+if "testServer" then
+  -->[true] receive_message_from_monitor(header, data)
+  if "header" then
+    if "data" then
+      --> openComRobot
+      --> ===AFTER_COM_ROBOT===
+      --> ===AFTER_ALL===
+    else
+      --> ===AFTER_COM_ROBOT===
+    endif
+  else
+    if "data" then
+      --> startRobot!
+      --> ===AFTER_START_ROBOT===
+    else
+      --> move = data
+      --> ===AFTER_START_ROBOT===
+      --> ===AFTER_ALL===
+      --> testServer
+    endif
+  endif
+  
+else
+  ->[false] (*)
+endif
+@enduml

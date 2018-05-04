@@ -41,7 +41,6 @@ void f_sendToMon(void * arg) {
     rt_sem_p(&sem_serverOk, TM_INFINITE);
     int err = 1;
     while (err > 0) {
-
 #ifdef _WITH_TRACE_
         printf("%s : waiting for a message in queue\n", info.name);
 #endif
@@ -49,13 +48,10 @@ void f_sendToMon(void * arg) {
 #ifdef _WITH_TRACE_
             printf("%s : message {%s,%s} in queue\n", info.name, msg.header, msg.data);
 #endif
-
             err = send_message_to_monitor(msg.header, msg.data);
             if(err <= 0){
-                
                 printf("connection perdu lol");
             }
-            
             free_msgToMon_data(&msg);
             rt_queue_free(&q_messageToMon, &msg);
         } else {
@@ -66,7 +62,7 @@ void f_sendToMon(void * arg) {
 
 void f_receiveFromMon(void *arg) {
     MessageFromMon msg;
-    int err;
+    int err = 1;
 
     /* INIT */
     RT_TASK_INFO info;
