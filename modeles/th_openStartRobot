@@ -1,0 +1,15 @@
+@startuml
+skinparam monochrome true
+start
+while ()
+:startRobot?;
+:err = send_command_robot(START_WITHOUT_WD);
+if (err) then (robot_ok)
+:messageToMon!ACK;
+:robotStarted = true;
+else
+:messageToMon!NAC;
+endif
+endwhile
+stop
+@enduml

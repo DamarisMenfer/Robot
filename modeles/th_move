@@ -1,0 +1,12 @@
+@startuml
+skinparam monochrome true
+start
+:start_period(100 ms);
+while ()
+:wait_next_period();
+if (robotStarted) then (true)
+:send_command_robot(move);
+endif
+endwhile
+stop
+@enduml

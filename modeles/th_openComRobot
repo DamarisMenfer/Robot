@@ -1,0 +1,13 @@
+@startuml
+skinparam monochrome true
+start
+while ()
+:openComRobot?;
+:err = open_communication_robot();
+if (err) then (robot_ok)
+:messageToMon!ACK;
+else
+:messageToMon!NAC;
+endif
+endwhile
+stop
