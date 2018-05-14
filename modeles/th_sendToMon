@@ -1,0 +1,15 @@
+@startuml
+skinparam monochrome true
+start
+:serverOK?;
+while ()
+:messageToMon?header,data;
+:err = send_message_to_monitor(header,data);
+if (err) then (<=)
+:close_communication_robot();
+:kill_nodejs();
+:stop_camera();
+endif
+endwhile
+stop
+@enduml
