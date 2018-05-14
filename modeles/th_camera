@@ -1,0 +1,27 @@
+@startuml
+skinparam monochrome true
+start
+:err = start_camera();
+if (err) then (failed)
+:messageToMon!NAC;
+stop
+else (succeed)
+:cameraStarted = true;
+while ()
+:searchArene?;
+:stopPeridique!;
+:getImage();
+:searchArene();
+:designerArene();
+:compresserImage();
+:imageToMon();
+:evt?data;
+if (data) then (succed)
+:sauvegarderArene();
+:
+stop
+else (fail)
+endwhile
+stop
+endif
+@enduml
