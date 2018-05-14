@@ -1,0 +1,10 @@
+@startuml
+skinparam monochrome true
+start
+:serverOK?;
+while ()
+:messageToMon?header,data;
+:send_message_to_monitor(header,data);
+endwhile
+stop
+@enduml
