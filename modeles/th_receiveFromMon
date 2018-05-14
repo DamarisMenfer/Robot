@@ -5,8 +5,10 @@ start
 while ()
 :err = receive_message_from_monitor(header,data);
 if (err) then (<=)
-stop
-endif
+:close_communication_robot();
+:kill_nodejs();
+:stop_camera();
+else
 if (header) then (HEADER_MTS_COM_DMB)
 if (data) then (OPEN_COM_DMB)
 :openComRobot!;
@@ -18,6 +20,7 @@ else (DMB_GO_FORWARD || DMB_GO_BACK
 || DMB_GO_LEFT || DMB_GO_RIGHT
 || DMB_STOP_MOVE)
 :move = data;
+endif
 endif
 endif
 endwhile
