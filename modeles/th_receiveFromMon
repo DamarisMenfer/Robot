@@ -1,28 +1,25 @@
 @startuml
-(*) --> "ServerOk?"
-if "testServer" then
-  -->[true] receive_message_from_monitor(header, data)
-  if "header" then
-    if "data" then
-      --> openComRobot
-      --> ===AFTER_COM_ROBOT===
-      --> ===AFTER_ALL===
-    else
-      --> ===AFTER_COM_ROBOT===
-    endif
-  else
-    if "data" then
-      --> startRobot!
-      --> ===AFTER_START_ROBOT===
-    else
-      --> move = data
-      --> ===AFTER_START_ROBOT===
-      --> ===AFTER_ALL===
-      --> testServer
-    endif
-  endif
-  
-else
-  ->[false] (*)
+skinparam monochrome true
+start
+:serverOk?;
+while ()
+:err = receive_message_from_monitor(header,data);
+if (err) then (<=)
+stop
 endif
+if (header) then (HEADER_MTS_COM_DMB)
+if (data) then (OPEN_COM_DMB)
+:openComRobot!;
+endif
+else (HEADER_MTS_DMB_ORDER)
+if (data) then (DMB_START_WITHOUT_WD)
+:startRobot!;
+else (DMB_GO_FORWARD || DMB_GO_BACK
+|| DMB_GO_LEFT || DMB_GO_RIGHT
+|| DMB_STOP_MOVE)
+:move = data;
+endif
+endif
+endwhile
+stop
 @enduml
