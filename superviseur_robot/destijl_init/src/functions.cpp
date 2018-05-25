@@ -1,6 +1,6 @@
 #include "../header/functions.h"
 
-char mode_start;
+bool mode_start;
 
 void write_in_queue(RT_QUEUE *, MessageToMon);
 
@@ -99,10 +99,16 @@ void f_receiveFromMon(void *arg) {
             if (msg.data[0] == DMB_START_WITHOUT_WD) { // Start robot
 #ifdef _WITH_TRACE_
                 printf("%s: message start robot\n", info.name);
-#endif 
+#endif
+                mode_start = false;
                 rt_sem_v(&sem_startRobot);
 
-            } else if ((msg.data[0] == DMB_GO_BACK)
+            } 
+            else if (msg.data[0] == DMB_START_WITH_WD) {
+                mode_start = true;
+                rt_sem_v(&sem_startRobot);
+            }
+            else if ((msg.data[0] == DMB_GO_BACK)
                     || (msg.data[0] == DMB_GO_FORWARD)
                     || (msg.data[0] == DMB_GO_LEFT)
                     || (msg.data[0] == DMB_GO_RIGHT)
@@ -171,7 +177,12 @@ void f_startRobot(void * arg) {
 #ifdef _WITH_TRACE_
         printf("%s : sem_startRobot arrived => Start robot\n", info.name);
 #endif
-        err = send_command_to_robot(DMB_START_WITHOUT_WD);
+        if(mode_start){
+            err = send_command_to_robot(DMB_START_WITHOUT_WD);
+        }
+        else{
+            err = send_command_to_robot(DMB_START_WITH_WD);
+        }
         if (err == 0) {
 #ifdef _WITH_TRACE_
             printf("%s : the robot is started\n", info.name);
