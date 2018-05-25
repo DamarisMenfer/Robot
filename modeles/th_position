@@ -1,0 +1,10 @@
+@startuml
+skinparam monochrome true
+start
+:launchWD?;
+while ()
+:waitnextperiod();
+:send_command_to_robot(ping);
+endwhile
+stop
+@enduml

@@ -78,13 +78,7 @@ void f_receiveFromMon(void *arg) {
 #ifdef _WITH_TRACE_
         printf("%s : waiting for a message from monitor\n", info.name);
 #endif
-        err = receive_message_from_monitor(msg.header, msg.data);
-        
-        if(err <= 0){
-            
-            printf("Connection perdu");
-        }
-        
+        receive_message_from_monitor(msg.header, msg.data);
 #ifdef _WITH_TRACE_
         printf("%s: msg {header:%s,data=%s} received from UI\n", info.name, msg.header, msg.data);
 #endif
@@ -127,6 +121,10 @@ void f_receiveFromMon(void *arg) {
             err = open_camera(&cam);
             if (err != 0)
                 send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
+        }
+        else if (strcmp(msg.header, HEADER_STM_POS) == 0){
+            rt_sem_v(&sem_position);
+            detect_position()
         }
     } while (err > 0);
 
@@ -207,7 +205,7 @@ void f_startRobot(void * arg) {
 }
 
 void f_battery(void  *arg){
-     /* INIT */
+    /* INIT */
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
     printf("Init %s\n", info.name);
@@ -298,6 +296,26 @@ void f_sendImage(void *arg)
         }
         rt_mutex_release(&mutex_robotStarted);    
         
+    }
+}
+
+void f_position(void *arg){
+    /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    printf("f_position ON !\n");
+    rt_sem_p(&sem_position, TM_INFINITE);
+    while(1){
+        rt_task_wait_period(NULL);
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        if (robotStarted) {
+            printf("F17 A FINIR !!!!\n")
+        }
+        rt_mutex_release(&mutex_robotStarted);    
     }
 }
 
