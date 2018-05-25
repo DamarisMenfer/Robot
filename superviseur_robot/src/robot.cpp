@@ -65,7 +65,7 @@ int send_command_to_robot(char cmd, const char * arg)
     // Handle medium loss
     if (comm_loss_cnt > 3) {
         // Send message to monitor
-        send_message_to_monitor(HEADER_STM_MES, "Communication lost");
+        send_message_to_monitor(HEADER_STM_MES, "Communication lost\n");
         close_communication_robot();
         //TODO: reopen communication?
     }
