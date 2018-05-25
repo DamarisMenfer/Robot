@@ -62,6 +62,7 @@ extern int PRIORITY_TSENDTOMON;
 extern int PRIORITY_TRECEIVEFROMMON;
 extern int PRIORITY_TSTARTROBOT;
 extern int PRIORITY_TBATTERY;
+extern int PRIORITY_TSENDIMAGE;
 
 void f_server(void *arg);
 void f_sendToMon(void *arg);
@@ -70,6 +71,7 @@ void f_openComRobot(void * arg);
 void f_move(void *arg);
 void f_startRobot(void *arg);
 void f_battery(void *arg);
+void f_sendImage(void *arg);
 
 #endif /* FUNCTIONS_H */
 

@@ -198,10 +198,6 @@ void startTasks() {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_start(&th_sendImage, &f_sendImage, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
 }
 
 void deleteTasks() {
