@@ -46,6 +46,7 @@ extern RT_SEM sem_barrier;
 extern RT_SEM sem_openComRobot;
 extern RT_SEM sem_serverOk;
 extern RT_SEM sem_startRobot;
+extern RT_SEM sem_position;
 
 extern RT_QUEUE q_messageToMon;
 
@@ -69,6 +70,7 @@ void f_sendToMon(void *arg);
 void f_receiveFromMon(void *arg);
 void f_openComRobot(void * arg);
 void f_move(void *arg);
+void f_position(void *arg);
 void f_startRobot(void *arg);
 void f_battery(void *arg);
 void f_sendImage(void *arg);
