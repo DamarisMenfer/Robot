@@ -127,6 +127,11 @@ void f_receiveFromMon(void *arg) {
 #endif
 
             }
+        } else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
+            Camera cam;
+            err = open_camera(&cam);
+            if (err != 0)
+                send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
         }
     } while (err > 0);
 
@@ -260,6 +265,39 @@ void f_move(void *arg) {
 #endif            
         }
         rt_mutex_release(&mutex_robotStarted);
+    }
+}
+
+void f_sendImage(void *arg)
+{
+     /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    rt_task_set_periodic(NULL, TM_NOW, 10000000);
+    
+    while(1) {
+        printf("sendImage task\n");
+        rt_task_wait_period(NULL);
+        int temp = 0;
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        if (robotStarted) {
+            // Get image
+            Image img;
+            get_image(&cam, &img);
+            Jpg img_compressed;
+            compress_image(&img, &img_compressed);
+
+            // Send image to monitor
+            MessageToMon msg;
+            set_msgToMon_header(&msg, HEADER_STM_IMAGE);
+            set_msgToMon_data(&msg, &img_compressed);
+            write_in_queue(&q_messageToMon, msg);
+        }
+        rt_mutex_release(&mutex_robotStarted);    
+        
     }
 }
 
