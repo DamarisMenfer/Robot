@@ -26,6 +26,8 @@ void f_server(void *arg) {
     }
 }
 
+int cpt_perte_co = 0;
+
 void f_sendToMon(void * arg) {
     MessageToMon msg;
 
@@ -50,7 +52,16 @@ void f_sendToMon(void * arg) {
 #endif
             err = send_message_to_monitor(msg.header, msg.data);
             if(err <= 0){
-                printf("connection perdu lol");
+                cpt_perte_co ++;
+                if(cpt_perte_co>3){
+                    printf("connection perdu lol");
+                    kill_nodejs();
+                    close_communication_robot();
+                    //arreter la cam, le show est terminé
+                }
+            }
+            else{
+                cpt_perte_co = 0;
             }
             free_msgToMon_data(&msg);
             rt_queue_free(&q_messageToMon, &msg);
