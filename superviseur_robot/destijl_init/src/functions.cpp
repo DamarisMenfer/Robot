@@ -1,180 +1,80 @@
-<<<<<<< HEAD
-/* 
- * File:   main.c
- * Author: pehladik
- *
- * Created on 23 décembre 2017, 19:45
- */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include <sys/mman.h>
-#include <alchemy/task.h>
-#include <alchemy/timer.h>
-#include <alchemy/mutex.h>
-#include <alchemy/sem.h>
-#include <alchemy/queue.h>
-
-#include "./header/functions.h"
-
-// Déclaration des taches
-RT_TASK th_server;
-RT_TASK th_sendToMon;
-RT_TASK th_receiveFromMon;
-RT_TASK th_openComRobot;
-RT_TASK th_startRobot;
-RT_TASK th_move;
-RT_TASK th_battery;
-RT_TASK th_sendImage;
-
-// Déclaration des priorités des taches
-int PRIORITY_TSERVER = 30;
-int PRIORITY_TOPENCOMROBOT = 20;
-int PRIORITY_TMOVE = 10;
-int PRIORITY_TSENDTOMON = 25;
-int PRIORITY_TRECEIVEFROMMON = 22;
-int PRIORITY_TSTARTROBOT = 20;
-int PRIORITY_TBATTERY = 9;
-int PRIORITY_SENDIMAGE = 9;
-
-RT_MUTEX mutex_robotStarted;
-RT_MUTEX mutex_move;
-
-// Déclaration des sémaphores
-RT_SEM sem_barrier;
-RT_SEM sem_openComRobot;
-RT_SEM sem_serverOk;
-RT_SEM sem_startRobot;
-
-// Déclaration des files de message
-RT_QUEUE q_messageToMon;
-
-int MSG_QUEUE_SIZE = 10;
-
-// Déclaration des ressources partagées
-int etatCommMoniteur = 1;
-int robotStarted = 0;
-char move = DMB_STOP_MOVE;
-
-/**
- * \fn void initStruct(void)
- * \brief Initialisation des structures de l'application (tâches, mutex, 
- * semaphore, etc.)
- */
-void initStruct(void);
-
-/**
- * \fn void startTasks(void)
- * \brief Démarrage des tâches
- */
-void startTasks(void);
-
-/**
- * \fn void deleteTasks(void)
- * \brief Arrêt des tâches
- */
-void deleteTasks(void);
-
-int main(int argc, char **argv) {
-    int err;
-    //Lock the memory to avoid memory swapping for this program
-    mlockall(MCL_CURRENT | MCL_FUTURE);
-=======
 #include "../header/functions.h"
 
-bool mode_start;
->>>>>>> e3ba49d7f58d31187f7d3389a967eb4b0878c491
+char mode_start;
 
-    printf("#################################\n");
-    printf("#      DE STIJL PROJECT         #\n");
-    printf("#################################\n");
+void write_in_queue(RT_QUEUE *, MessageToMon);
 
-    initStruct();
-    startTasks();
-    rt_sem_broadcast(&sem_barrier);
-    pause();
-    deleteTasks();
+Camera cam = NULL; // /!\ STUPID
+Arene arene;
+boolean arenaConfirmed = false;
 
-    return 0;
-}
-
-void initStruct(void) {
+void f_server(void *arg) {
     int err;
-    /* Creation des mutex */
-    if (err = rt_mutex_create(&mutex_robotStarted, NULL)) {
-        printf("Error mutex create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_mutex_create(&mutex_move, NULL)) {
-        printf("Error mutex create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
+    /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
 
-    /* Creation du semaphore */
-    if (err = rt_sem_create(&sem_barrier, NULL, 0, S_FIFO)) {
-        printf("Error semaphore create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_sem_create(&sem_openComRobot, NULL, 0, S_FIFO)) {
-        printf("Error semaphore create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_sem_create(&sem_serverOk, NULL, 0, S_FIFO)) {
-        printf("Error semaphore create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_sem_create(&sem_startRobot, NULL, 0, S_FIFO)) {
-        printf("Error semaphore create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
+    err = run_nodejs("/usr/local/bin/node", "/home/pi/Interface_Robot/server.js");
 
-    /* Creation des taches */
-    if (err = rt_task_create(&th_server, "th_server", 0, PRIORITY_TSERVER, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
+    if (err < 0) {
+        printf("Failed to start nodejs: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_create(&th_receiveFromMon, "th_receiveFromMon", 0, PRIORITY_TRECEIVEFROMMON, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_create(&th_sendToMon, "th_sendToMon", 0, PRIORITY_TSENDTOMON, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_create(&th_openComRobot, "th_openComRobot", 0, PRIORITY_TOPENCOMROBOT, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_create(&th_startRobot, "th_startRobot", 0, PRIORITY_TSTARTROBOT, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_create(&th_move, "th_move", 0, PRIORITY_TMOVE, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TBATTERY, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_create(&th_sendImage, "th_sendImage", 0, PRIORITY_TSENDIMAGE, 0)) {
-        printf("Error task create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-
-    /* Creation des files de messages */
-    if (err = rt_queue_create(&q_messageToMon, "toto", MSG_QUEUE_SIZE * sizeof (MessageToRobot), MSG_QUEUE_SIZE, Q_FIFO)) {
-        printf("Error msg queue create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
+    } else {
+#ifdef _WITH_TRACE_
+        printf("%s: nodejs started\n", info.name);
+#endif
+        open_server();
+        rt_sem_broadcast(&sem_serverOk);
     }
 }
 
-<<<<<<< HEAD
-void startTasks() {
+int cpt_perte_co = 0;
 
-=======
+void f_sendToMon(void * arg) {
+    MessageToMon msg;
+
+    /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+
+#ifdef _WITH_TRACE_
+    printf("%s : waiting for sem_serverOk\n", info.name);
+#endif
+    rt_sem_p(&sem_serverOk, TM_INFINITE);
+    int err = 1;
+    while (err > 0) {
+#ifdef _WITH_TRACE_
+        printf("%s : waiting for a message in queue\n", info.name);
+#endif
+        if (rt_queue_read(&q_messageToMon, &msg, sizeof (MessageToRobot), TM_INFINITE) >= 0) {
+#ifdef _WITH_TRACE_
+            printf("%s : message {%s,%s} in queue\n", info.name, msg.header, msg.data);
+#endif
+            err = send_message_to_monitor(msg.header, msg.data);
+            if(err <= 0){
+                cpt_perte_co ++;
+                if(cpt_perte_co>3){
+                    printf("connection perdu lol");
+                    kill_nodejs();
+                    close_communication_robot();
+                    //arreter la cam, le show est terminé
+                }
+            }
+            else{
+                cpt_perte_co = 0;
+            }
+            free_msgToMon_data(&msg);
+            rt_queue_free(&q_messageToMon, &msg);
+        } else {
+            printf("Error msg queue write: %s\n", strerror(-err));
+        }
+    }
+}
+
 void f_receiveFromMon(void *arg) {
     MessageFromMon msg;
     int err = 1;
@@ -193,7 +93,13 @@ void f_receiveFromMon(void *arg) {
 #ifdef _WITH_TRACE_
         printf("%s : waiting for a message from monitor\n", info.name);
 #endif
-        receive_message_from_monitor(msg.header, msg.data);
+        err = receive_message_from_monitor(msg.header, msg.data);
+        
+        if(err <= 0){
+            
+            printf("Connection perdu");
+        }
+        
 #ifdef _WITH_TRACE_
         printf("%s: msg {header:%s,data=%s} received from UI\n", info.name, msg.header, msg.data);
 #endif
@@ -208,16 +114,10 @@ void f_receiveFromMon(void *arg) {
             if (msg.data[0] == DMB_START_WITHOUT_WD) { // Start robot
 #ifdef _WITH_TRACE_
                 printf("%s: message start robot\n", info.name);
-#endif
-                mode_start = false;
+#endif 
                 rt_sem_v(&sem_startRobot);
 
-            } 
-            else if (msg.data[0] == DMB_START_WITH_WD) {
-                mode_start = true;
-                rt_sem_v(&sem_startRobot);
-            }
-            else if ((msg.data[0] == DMB_GO_BACK)
+            } else if ((msg.data[0] == DMB_GO_BACK)
                     || (msg.data[0] == DMB_GO_FORWARD)
                     || (msg.data[0] == DMB_GO_LEFT)
                     || (msg.data[0] == DMB_GO_RIGHT)
@@ -232,37 +132,95 @@ void f_receiveFromMon(void *arg) {
 
             }
         } else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
-            Camera cam;
-            err = open_camera(&cam);
-            if (err != 0)
-                send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
-        }
-        else if (strcmp(msg.header, HEADER_STM_POS) == 0){
-            rt_sem_v(&sem_position);
-            detect_position()
+            if (strcmp(msg.data, CAM_OPEN) == 0) {;
+                if (open_camera(&cam) == 0) {
+                    send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
+                } else {
+                    // Start task
+                    if (err = rt_task_start(&th_sendImage, &f_sendImage, NULL)) {
+                        printf("Error task start: %s\n", strerror(-err));
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+            else if (strcmp(msg.data, CAM_CLOSE) == 0) {
+                send_message_to_monitor(HEADER_STM_MES, "Closing camera...\n");
+                close_camera(&cam);
+            }
+            else if (strcmp(msg.data, CAM_ASK_ARENA) == 0) {
+                send_message_to_monitor(HEADER_STM_MES, "Asking arena...\n");
+                rt_task_suspend(&th_sendImage);
+                
+                // Get image
+                Image imgIn, imgOut;
+                get_image(&cam, &imgIn);
+                detect_arena(&imgIn, &arene); // global var!
+                draw_arena(&imgIn, &imgOut,&arene);
+                
+                // Send image to monitor
+                Jpg img_compressed;
+                compress_image(&imgOut, &img_compressed, );
+                MessageToMon msg;
+                set_msgToMon_header(&msg, HEADER_STM_IMAGE);
+                set_msgToMon_data(&msg, &img_compressed);
+                write_in_queue(&q_messageToMon, msg);
+            }
+            else if (strcmp(msg.data, CAM_ARENA_CONFIRM) == 0) {
+                rt_task_resume(&th_sendImage);
+                arenaConfirmed = true;
+                
+            }
+            else if (strcmp(msg.data, CAM_ARENA_INFIRM) == 0) {
+                rt_task_resume(&th_sendImage);
+            }
+           
         }
     } while (err > 0);
 
 }
 
 void f_openComRobot(void * arg) {
->>>>>>> e3ba49d7f58d31187f7d3389a967eb4b0878c491
     int err;
-    
-    if (err = rt_task_start(&th_startRobot, &f_startRobot, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
 
-<<<<<<< HEAD
-    if (err = rt_task_start(&th_receiveFromMon, &f_receiveFromMon, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
+    /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+
+    while (1) {
+#ifdef _WITH_TRACE_
+        printf("%s : Wait sem_openComRobot\n", info.name);
+#endif
+        rt_sem_p(&sem_openComRobot, TM_INFINITE);
+#ifdef _WITH_TRACE_
+        printf("%s : sem_openComRobot arrived => open communication robot\n", info.name);
+#endif
+        err = open_communication_robot();
+        if (err == 0) {
+#ifdef _WITH_TRACE_
+            printf("%s : the communication is opened\n", info.name);
+#endif
+            MessageToMon msg;
+            set_msgToMon_header(&msg, HEADER_STM_ACK);
+            write_in_queue(&q_messageToMon, msg);
+        } else {
+            MessageToMon msg;
+            set_msgToMon_header(&msg, HEADER_STM_NO_ACK);
+            write_in_queue(&q_messageToMon, msg);
+        }
     }
-    if (err = rt_task_start(&th_sendToMon, &f_sendToMon, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-=======
+}
+
+void f_startRobot(void * arg) {
+    int err;
+
+    /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+
     while (1) {
 #ifdef _WITH_TRACE_
         printf("%s : Wait sem_startRobot\n", info.name);
@@ -271,12 +229,7 @@ void f_openComRobot(void * arg) {
 #ifdef _WITH_TRACE_
         printf("%s : sem_startRobot arrived => Start robot\n", info.name);
 #endif
-        if(mode_start){
-            err = send_command_to_robot(DMB_START_WITHOUT_WD);
-        }
-        else{
-            err = send_command_to_robot(DMB_START_WITH_WD);
-        }
+        err = send_command_to_robot(DMB_START_WITHOUT_WD);
         if (err == 0) {
 #ifdef _WITH_TRACE_
             printf("%s : the robot is started\n", info.name);
@@ -296,7 +249,7 @@ void f_openComRobot(void * arg) {
 }
 
 void f_battery(void  *arg){
-    /* INIT */
+     /* INIT */
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
     printf("Init %s\n", info.name);
@@ -319,50 +272,80 @@ void f_battery(void  *arg){
         }
         rt_mutex_release(&mutex_robotStarted);    
         
->>>>>>> e3ba49d7f58d31187f7d3389a967eb4b0878c491
-    }
-    if (err = rt_task_start(&th_openComRobot, &f_openComRobot, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_start(&th_move, &f_move, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_start(&th_server, &f_server, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-    if (err = rt_task_start(&th_battery, &f_battery, NULL)) {
-        printf("Error task start: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
     }
 }
 
-<<<<<<< HEAD
-void deleteTasks() {
-    rt_task_delete(&th_server);
-    rt_task_delete(&th_openComRobot);
-    rt_task_delete(&th_move);
-=======
-void f_position(void *arg){
+void f_move(void *arg) {
     /* INIT */
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
     printf("Init %s\n", info.name);
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    
+
+    /* PERIODIC START */
+#ifdef _WITH_TRACE_
+    printf("%s: start period\n", info.name);
+#endif
     rt_task_set_periodic(NULL, TM_NOW, 100000000);
-    printf("f_position ON !\n");
-    rt_sem_p(&sem_position, TM_INFINITE);
-    while(1){
+    while (1) {
+#ifdef _WITH_TRACE_
+        printf("%s: Wait period \n", info.name);
+#endif
         rt_task_wait_period(NULL);
+#ifdef _WITH_TRACE_
+       printf("%s: Periodic activation\n", info.name);
+        printf("%s: move equals %c\n", info.name, move);
+#endif
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
         if (robotStarted) {
-            printf("F17 A FINIR !!!!\n")
+            rt_mutex_acquire(&mutex_move, TM_INFINITE);
+            send_command_to_robot(move);
+            rt_mutex_release(&mutex_move);
+
+#ifdef _WITH_TRACE_
+            printf("%s: the movement %c was sent\n", info.name, move);
+#endif            
+        }
+        rt_mutex_release(&mutex_robotStarted);
+    }
+}
+
+void f_sendImage(void *arg)
+{
+     /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    rt_task_set_periodic(NULL, TM_NOW, 10000000);
+    
+    while(1) {
+        printf("sendImage task\n");
+        rt_task_wait_period(NULL);
+        int temp = 0;
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        if (robotStarted) {
+            // Get image
+            Image img;
+            get_image(&cam, &img);
+            
+            // Draw arena if confirmed
+            Image img2 = img->clone();
+            if (arenaConfirmed)
+                draw_arena(&img, &img2, &arene);
+            Jpg img_compressed;
+            compress_image(&img2, &img_compressed);
+
+            // Send image to monitor
+            MessageToMon msg;
+            set_msgToMon_header(&msg, HEADER_STM_IMAGE);
+            set_msgToMon_data(&msg, &img_compressed);
+            write_in_queue(&q_messageToMon, msg);
         }
         rt_mutex_release(&mutex_robotStarted);    
-    }
+        
+    });
 }
 
 void write_in_queue(RT_QUEUE *queue, MessageToMon msg) {
@@ -370,5 +353,5 @@ void write_in_queue(RT_QUEUE *queue, MessageToMon msg) {
     buff = rt_queue_alloc(&q_messageToMon, sizeof (MessageToMon));
     memcpy(buff, &msg, sizeof (MessageToMon));
     rt_queue_send(&q_messageToMon, buff, sizeof (MessageToMon), Q_NORMAL);
->>>>>>> e3ba49d7f58d31187f7d3389a967eb4b0878c491
 }
+
