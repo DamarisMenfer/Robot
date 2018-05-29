@@ -110,7 +110,6 @@ void f_receiveFromMon(void *arg) {
 #ifdef _WITH_TRACE_
                 printf("%s: message start robot\n", info.name);
 #endif          
-                printf("PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n");
                 rt_sem_v(&sem_startRobot);
 
             } else if ((msg.data[0] == DMB_GO_BACK)
@@ -127,7 +126,11 @@ void f_receiveFromMon(void *arg) {
 #endif
 
             }
-        } /*else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
+        }
+        else if( strcmp(msg.header, CAM_COMPUTE_POSITION ) == 0 ){
+            rt_sem_v(&sem_position);
+        }
+        /*else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
             if (strcmp(msg.data, CAM_OPEN) == 0) {  // Mr. BRYANT ! C'est bizarre de comparer un str et un char
                 if (open_camera(&cam) == 0) {
                     send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
@@ -236,12 +239,10 @@ void f_startRobot(void * arg) {
             MessageToMon msg;
             set_msgToMon_header(&msg, HEADER_STM_ACK);
             write_in_queue(&q_messageToMon, msg);
-            printf("COUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOU\n");
         } else {
             MessageToMon msg;
             set_msgToMon_header(&msg, HEADER_STM_NO_ACK);
             write_in_queue(&q_messageToMon, msg);
-             printf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
         }
     }
 }
@@ -354,7 +355,7 @@ void f_position(void * arg){
     rt_sem_p(&sem_barrier, TM_INFINITE);
     
     rt_task_set_periodic(NULL, TM_NOW, 100000000);
-    
+    rt_sem_p(&sem_position, TM_INFINITE);
     while(1){
         rt_task_wait_period(NULL);
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);

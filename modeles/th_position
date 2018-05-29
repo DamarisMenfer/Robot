@@ -1,10 +1,20 @@
 @startuml
 skinparam monochrome true
 start
-:launchWD?;
 while ()
 :waitnextperiod();
-:send_command_to_robot(ping);
+:rt_sem_p(&sem_position, TM_INFINITE);
+:get_image();
+:detect_position();
+if (position) then (!= null)
+:draw_position();
+:sendToMonitor(POS, position);
+else 
+:sendToMonitor(POS, position, null);
+endif
+:compress_image();
+:sendToMonitor(IMG, image);
+:rt_sem_v(&sem_position, TM_INFINITE);
 endwhile
 stop
 @enduml

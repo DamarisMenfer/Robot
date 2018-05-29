@@ -209,10 +209,10 @@ void startTasks() {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_start(&th_position, &f_position, NULL)) {
+    /*if (err = rt_task_start(&th_position, &f_position, NULL)) {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
-    }
+    }*/
 }
 
 void deleteTasks() {

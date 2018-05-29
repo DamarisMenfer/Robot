@@ -13,13 +13,19 @@ if (header) then (HEADER_MTS_COM_DMB)
 if (data) then (OPEN_COM_DMB)
 :openComRobot!;
 endif
-else (HEADER_MTS_DMB_ORDER)
+elseif (HEADER_MTS_DMB_ORDER)
 if (data) then (DMB_START_WITHOUT_WD)
 :startRobot!;
 else (DMB_GO_FORWARD || DMB_GO_BACK
 || DMB_GO_LEFT || DMB_GO_RIGHT
 || DMB_STOP_MOVE)
 :move = data;
+endif
+elseif (CAM)
+if (data) then (CAM_COMPUTE_POSITION)
+:rt_sem_v(sem_position);
+else (CAM_STOP_COMPUTE_POSITION)
+:rt_sem_p(sem_position);
 endif
 endif
 endif
