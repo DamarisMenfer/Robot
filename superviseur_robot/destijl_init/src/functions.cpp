@@ -4,9 +4,9 @@ char mode_start;
 
 void write_in_queue(RT_QUEUE *, MessageToMon);
 
-Camera cam = NULL; // /!\ STUPID
+Camera cam; // /!\ STUPID
 Arene arene;
-boolean arenaConfirmed = false;
+bool arenaConfirmed = false;
 
 void f_server(void *arg) {
     int err;
@@ -45,8 +45,8 @@ void f_sendToMon(void * arg) {
     printf("%s : waiting for sem_serverOk\n", info.name);
 #endif
     rt_sem_p(&sem_serverOk, TM_INFINITE);
-    int err = 1;
-    while (err > 0) {
+    cpt_perte_co = 0;
+    while (cpt_perte_co < 50) {
 #ifdef _WITH_TRACE_
         printf("%s : waiting for a message in queue\n", info.name);
 #endif
@@ -54,11 +54,13 @@ void f_sendToMon(void * arg) {
 #ifdef _WITH_TRACE_
             printf("%s : message {%s,%s} in queue\n", info.name, msg.header, msg.data);
 #endif
-            err = send_message_to_monitor(msg.header, msg.data);
+            int err = send_message_to_monitor(msg.header, msg.data);
+            free_msgToMon_data(&msg);
+            rt_queue_free(&q_messageToMon, &msg);
             if(err <= 0){
                 cpt_perte_co ++;
-                if(cpt_perte_co>3){
-                    printf("connection perdu lol");
+                if(cpt_perte_co>50){
+                    printf("Connexion perdu\n");
                     kill_nodejs();
                     close_communication_robot();
                     //arreter la cam, le show est terminé
@@ -67,10 +69,9 @@ void f_sendToMon(void * arg) {
             else{
                 cpt_perte_co = 0;
             }
-            free_msgToMon_data(&msg);
-            rt_queue_free(&q_messageToMon, &msg);
+            
         } else {
-            printf("Error msg queue write: %s\n", strerror(-err));
+            printf("Error msg queue write: \n");
         }
     }
 }
@@ -94,12 +95,6 @@ void f_receiveFromMon(void *arg) {
         printf("%s : waiting for a message from monitor\n", info.name);
 #endif
         err = receive_message_from_monitor(msg.header, msg.data);
-        
-        if(err <= 0){
-            
-            printf("Connection perdu");
-        }
-        
 #ifdef _WITH_TRACE_
         printf("%s: msg {header:%s,data=%s} received from UI\n", info.name, msg.header, msg.data);
 #endif
@@ -114,7 +109,8 @@ void f_receiveFromMon(void *arg) {
             if (msg.data[0] == DMB_START_WITHOUT_WD) { // Start robot
 #ifdef _WITH_TRACE_
                 printf("%s: message start robot\n", info.name);
-#endif 
+#endif          
+                printf("PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n");
                 rt_sem_v(&sem_startRobot);
 
             } else if ((msg.data[0] == DMB_GO_BACK)
@@ -131,8 +127,8 @@ void f_receiveFromMon(void *arg) {
 #endif
 
             }
-        } else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
-            if (strcmp(msg.data, CAM_OPEN) == 0) {;
+        } /*else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
+            if (strcmp(msg.data, CAM_OPEN) == 0) {  // Mr. BRYANT ! C'est bizarre de comparer un str et un char
                 if (open_camera(&cam) == 0) {
                     send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
                 } else {
@@ -174,7 +170,7 @@ void f_receiveFromMon(void *arg) {
                 rt_task_resume(&th_sendImage);
             }
            
-        }
+        }*/
     } while (err > 0);
 
 }
@@ -240,10 +236,12 @@ void f_startRobot(void * arg) {
             MessageToMon msg;
             set_msgToMon_header(&msg, HEADER_STM_ACK);
             write_in_queue(&q_messageToMon, msg);
+            printf("COUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOUCOU\n");
         } else {
             MessageToMon msg;
             set_msgToMon_header(&msg, HEADER_STM_NO_ACK);
             write_in_queue(&q_messageToMon, msg);
+             printf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
         }
     }
 }
@@ -309,10 +307,10 @@ void f_move(void *arg) {
         rt_mutex_release(&mutex_robotStarted);
     }
 }
-
+/*
 void f_sendImage(void *arg)
 {
-     /* INIT */
+     
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
     printf("Init %s\n", info.name);
@@ -346,6 +344,36 @@ void f_sendImage(void *arg)
         rt_mutex_release(&mutex_robotStarted);    
         
     });
+}*/
+
+void f_position(void * arg){
+         /* INIT */
+    RT_TASK_INFO info;
+    rt_task_inquire(NULL, &info);
+    printf("Init %s\n", info.name);
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    
+    while(1){
+        rt_task_wait_period(NULL);
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        if (robotStarted) {
+            printf("Position\n");
+            Camera camer;
+            Image im;
+            Image imWithPos;
+            Position pos;
+            open_camera(&camer);
+            get_image(&camer, &im);
+            detect_position(&im, &pos);
+            draw_position(&im, &imWithPos, &pos);
+        }
+        rt_mutex_release(&mutex_robotStarted);    
+        
+    }
+    Camera camer;
+    open_camera(&camer);
 }
 
 void write_in_queue(RT_QUEUE *queue, MessageToMon msg) {

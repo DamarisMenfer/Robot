@@ -37,7 +37,7 @@ int PRIORITY_TSENDTOMON = 25;
 int PRIORITY_TRECEIVEFROMMON = 22;
 int PRIORITY_TSTARTROBOT = 20;
 int PRIORITY_TBATTERY = 9;
-int PRIORITY_SENDIMAGE = 9;
+int PRIORITY_TSENDIMAGE = 9;
 int PRIORITY_TPOSITION = 9;
 
 RT_MUTEX mutex_robotStarted;
@@ -156,14 +156,14 @@ void initStruct(void) {
         printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TBATTERY, 0)) {
+   if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TBATTERY, 0)) {
         printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
-    }
+    }/*
     if (err = rt_task_create(&th_sendImage, "th_sendImage", 0, PRIORITY_TSENDIMAGE, 0)) {
         printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
-    }
+    }*/
     if (err = rt_task_create(&th_position, "th_position", 0, PRIORITY_TPOSITION, 0)) {
         printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
@@ -205,7 +205,7 @@ void startTasks() {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_start(&th_battery, &f_battery, NULL)) {
+   if (err = rt_task_start(&th_battery, &f_battery, NULL)) {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
