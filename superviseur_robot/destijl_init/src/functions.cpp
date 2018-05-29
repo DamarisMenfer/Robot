@@ -3,6 +3,7 @@
 char mode_start;
 
 void write_in_queue(RT_QUEUE *, MessageToMon);
+void send_compressed_img(Image *img);
 
 Camera cam; // /!\ STUPID
 Arene arene;
@@ -126,48 +127,58 @@ void f_receiveFromMon(void *arg) {
 #endif
             }
         } else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
+            send_message_to_monitor(HEADER_STM_ACK, NULL);
+            
+            // Open camera
             if (msg.data[0] == CAM_OPEN) {
                 if (open_camera(&cam) != 0) {
                     send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
                 } else {
                     // Start task
-                    send_message_to_monitor(HEADER_STM_ACK, NULL);
-                    if (err = rt_task_start(&th_sendImage, &f_sendImage, NULL)) {
-                        printf("Error task start: %s\n", strerror(-err));
+                    int err2;
+                    if (err2 = rt_task_start(&th_sendImage, &f_sendImage, NULL)) {
+                        printf("Error task start: %s\n", strerror(-err2));
                         exit(EXIT_FAILURE);
                     }
                 }
             }
-            /*else if (strcmp(msg.data, CAM_CLOSE) == 0) {
+            // Close camera
+            else if (msg.data[0] == CAM_CLOSE) {
+                //send_message_to_monitor(HEADER_STM_ACK, NULL);
                 send_message_to_monitor(HEADER_STM_MES, "Closing camera...\n");
+                printf("Closing camera...\n");
                 close_camera(&cam);
             }
-            else if (strcmp(msg.data, CAM_ASK_ARENA) == 0) {
+            // Ask arena
+            else if (msg.data[0] == CAM_ASK_ARENA) {
+                //send_message_to_monitor(HEADER_STM_ACK, NULL);
                 send_message_to_monitor(HEADER_STM_MES, "Asking arena...\n");
-                rt_task_suspend(&th_sendImage);
+                printf("Asking arena...\n");
                 
                 // Get image
                 Image imgIn, imgOut;
                 get_image(&cam, &imgIn);
-                detect_arena(&imgIn, &arene); // global var!
-                draw_arena(&imgIn, &imgOut,&arene);
-                
-                // Send image to monitor
-                Jpg img_compressed;
-                compress_image(&imgOut, &img_compressed, );
-                MessageToMon msg;
-                set_msgToMon_header(&msg, HEADER_STM_IMAGE);
-                set_msgToMon_data(&msg, &img_compressed);
-                write_in_queue(&q_messageToMon, msg);
+                if (detect_arena(&imgIn, &arene) != 0) // TODO: global var!
+                    printf("Failed detecting arena\n");
+                printf("Drawing arena...\n");
+                draw_arena(&imgIn, &imgOut, &arene);
+                send_compressed_img(&imgOut);
+
+                // Suspend sendImage task
+                rt_task_suspend(&th_sendImage);
             }
-            else if (strcmp(msg.data, CAM_ARENA_CONFIRM) == 0) {
-                rt_task_resume(&th_sendImage);
+            // Confirm arena
+            else if (msg.data[0] == CAM_ARENA_CONFIRM) {
+                printf("Arena confirmed\n");
                 arenaConfirmed = true;
-                
-            }
-            else if (strcmp(msg.data, CAM_ARENA_INFIRM) == 0) {
                 rt_task_resume(&th_sendImage);
-            }*/
+            }
+            // Infirm arena
+            else if (msg.data[0] == CAM_ARENA_INFIRM) {
+                printf("Arena infirmed\n");
+                arenaConfirmed = false;
+                rt_task_resume(&th_sendImage);
+            }
         }
     } while (err > 0);
 
@@ -315,29 +326,19 @@ void f_sendImage(void *arg)
     rt_task_set_periodic(NULL, TM_NOW, 10000000);
     
     while(1) {
-        printf("sendImage task\n");
+        //printf("sendImage task\n");
         rt_task_wait_period(NULL);
         
         // Get image
         Image img;
         get_image(&cam, &img);
-        printf("Image\n");
 
         // Draw arena if confirmed
-        /*Image img2 = img.clone();
+        Image img2 = img.clone();
         if (arenaConfirmed)
-            draw_arena(&img, &img2, &arene);*/
-        Jpg img_compressed;
-        compress_image(&img, &img_compressed); // TODO: img -> img2
-        printf("compressed\n");
-
-        // Send image to monitor
-        MessageToMon msg;
-        /*set_msgToMon_header(&msg, HEADER_STM_IMAGE);
-        set_msgToMon_data(&msg, &img_compressed);*/
-        send_message_to_monitor(HEADER_STM_IMAGE, &img_compressed);
-        //write_in_queue(&q_messageToMon, msg);
-        printf("sent (size=%d)\n", sizeof(img_compressed));
+            draw_arena(&img, &img2, &arene);
+       
+        send_compressed_img(&img2);
     }
 }
 
@@ -376,5 +377,17 @@ void write_in_queue(RT_QUEUE *queue, MessageToMon msg) {
     buff = rt_queue_alloc(&q_messageToMon, sizeof (MessageToMon));
     memcpy(buff, &msg, sizeof (MessageToMon));
     rt_queue_send(&q_messageToMon, buff, sizeof (MessageToMon), Q_NORMAL);
+}
+
+void send_compressed_img(Image *img)
+{
+    Jpg img_compressed;
+    compress_image(img, &img_compressed);
+    //printf("Img compressed\n");
+
+    // Send image to monitor
+    MessageToMon msg;
+    send_message_to_monitor(HEADER_STM_IMAGE, &img_compressed);;
+    //printf("Img sent\n");
 }
 
