@@ -124,25 +124,21 @@ void f_receiveFromMon(void *arg) {
 #ifdef _WITH_TRACE_
                 printf("%s: message update movement with %c\n", info.name, move);
 #endif
-
             }
-        }
-        else if( strcmp(msg.header, CAM_COMPUTE_POSITION ) == 0 ){
-            rt_sem_v(&sem_position);
-        }
-        /*else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
-            if (strcmp(msg.data, CAM_OPEN) == 0) {  // Mr. BRYANT ! C'est bizarre de comparer un str et un char
-                if (open_camera(&cam) == 0) {
+        } else if (strcmp(msg.header, HEADER_MTS_CAMERA) == 0) {
+            if (msg.data[0] == CAM_OPEN) {
+                if (open_camera(&cam) != 0) {
                     send_message_to_monitor(HEADER_STM_MES, "Failed opening camera\n");
                 } else {
                     // Start task
+                    send_message_to_monitor(HEADER_STM_ACK, NULL);
                     if (err = rt_task_start(&th_sendImage, &f_sendImage, NULL)) {
                         printf("Error task start: %s\n", strerror(-err));
                         exit(EXIT_FAILURE);
                     }
                 }
             }
-            else if (strcmp(msg.data, CAM_CLOSE) == 0) {
+            /*else if (strcmp(msg.data, CAM_CLOSE) == 0) {
                 send_message_to_monitor(HEADER_STM_MES, "Closing camera...\n");
                 close_camera(&cam);
             }
@@ -171,9 +167,8 @@ void f_receiveFromMon(void *arg) {
             }
             else if (strcmp(msg.data, CAM_ARENA_INFIRM) == 0) {
                 rt_task_resume(&th_sendImage);
-            }
-           
-        }*/
+            }*/
+        }
     } while (err > 0);
 
 }
@@ -308,44 +303,43 @@ void f_move(void *arg) {
         rt_mutex_release(&mutex_robotStarted);
     }
 }
-/*
+
 void f_sendImage(void *arg)
 {
      
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
     printf("Init %s\n", info.name);
-    rt_sem_p(&sem_barrier, TM_INFINITE);
+    //rt_sem_p(&sem_barrier, TM_INFINITE);
     
     rt_task_set_periodic(NULL, TM_NOW, 10000000);
     
     while(1) {
         printf("sendImage task\n");
         rt_task_wait_period(NULL);
-        int temp = 0;
-        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
-        if (robotStarted) {
-            // Get image
-            Image img;
-            get_image(&cam, &img);
-            
-            // Draw arena if confirmed
-            Image img2 = img->clone();
-            if (arenaConfirmed)
-                draw_arena(&img, &img2, &arene);
-            Jpg img_compressed;
-            compress_image(&img2, &img_compressed);
-
-            // Send image to monitor
-            MessageToMon msg;
-            set_msgToMon_header(&msg, HEADER_STM_IMAGE);
-            set_msgToMon_data(&msg, &img_compressed);
-            write_in_queue(&q_messageToMon, msg);
-        }
-        rt_mutex_release(&mutex_robotStarted);    
         
-    });
-}*/
+        // Get image
+        Image img;
+        get_image(&cam, &img);
+        printf("Image\n");
+
+        // Draw arena if confirmed
+        /*Image img2 = img.clone();
+        if (arenaConfirmed)
+            draw_arena(&img, &img2, &arene);*/
+        Jpg img_compressed;
+        compress_image(&img, &img_compressed); // TODO: img -> img2
+        printf("compressed\n");
+
+        // Send image to monitor
+        MessageToMon msg;
+        /*set_msgToMon_header(&msg, HEADER_STM_IMAGE);
+        set_msgToMon_data(&msg, &img_compressed);*/
+        send_message_to_monitor(HEADER_STM_IMAGE, &img_compressed);
+        //write_in_queue(&q_messageToMon, msg);
+        printf("sent (size=%d)\n", sizeof(img_compressed));
+    }
+}
 
 void f_position(void * arg){
          /* INIT */
