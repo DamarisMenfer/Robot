@@ -6,8 +6,10 @@ void write_in_queue(RT_QUEUE *, MessageToMon);
 void send_compressed_img(Image *img);
 
 Camera cam; // /!\ STUPID
-Arene arene;
+Arene arene = NULL;
+Position pos = NULL;
 bool arenaConfirmed = false;
+bool position = false;
 
 void f_server(void *arg) {
     int err;
@@ -179,6 +181,10 @@ void f_receiveFromMon(void *arg) {
                 arenaConfirmed = false;
                 rt_task_resume(&th_sendImage);
             }
+            else if (msg.data[0] = CAM_COMPUTE_POSITION){
+                printf("Monitor ask for Dumby position.\n");
+                position = true;
+            }
         }
     } while (err > 0);
 
@@ -332,18 +338,24 @@ void f_sendImage(void *arg)
         // Get image
         Image img;
         get_image(&cam, &img);
-
+        
         // Draw arena if confirmed
         Image img2 = img.clone();
         if (arenaConfirmed)
             draw_arena(&img, &img2, &arene);
-       
+        
+        if(position){
+            detect_position(&img, &pos);
+            send_message_to_monitor(HEADER_STM_POS, &pos);
+            draw_position(&img2, &img2, &pos);
+        }
+        
         send_compressed_img(&img2);
     }
 }
 
-void f_position(void * arg){
-         /* INIT */
+/*void f_position(void * arg){
+        
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
     printf("Init %s\n", info.name);
@@ -351,6 +363,7 @@ void f_position(void * arg){
     
     rt_task_set_periodic(NULL, TM_NOW, 100000000);
     rt_sem_p(&sem_position, TM_INFINITE);
+    open_camera(&camer);
     while(1){
         rt_task_wait_period(NULL);
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
@@ -360,17 +373,17 @@ void f_position(void * arg){
             Image im;
             Image imWithPos;
             Position pos;
-            open_camera(&camer);
             get_image(&camer, &im);
             detect_position(&im, &pos);
             draw_position(&im, &imWithPos, &pos);
+            send_compressed_img(&imWithPos);
         }
         rt_mutex_release(&mutex_robotStarted);    
         
     }
     Camera camer;
     open_camera(&camer);
-}
+}*/
 
 void write_in_queue(RT_QUEUE *queue, MessageToMon msg) {
     void *buff;
@@ -387,7 +400,7 @@ void send_compressed_img(Image *img)
 
     // Send image to monitor
     MessageToMon msg;
-    send_message_to_monitor(HEADER_STM_IMAGE, &img_compressed);;
+    send_message_to_monitor(HEADER_STM_IMAGE, &img_compressed);
     //printf("Img sent\n");
 }
 

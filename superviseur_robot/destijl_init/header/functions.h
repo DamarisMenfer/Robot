@@ -39,7 +39,7 @@ extern RT_TASK th_startRobot;
 extern RT_TASK th_move;
 extern RT_TASK th_battery;
 extern RT_TASK th_sendImage;
-extern RT_TASK th_position;
+//extern RT_TASK th_position;
 
 extern RT_MUTEX mutex_robotStarted;
 extern RT_MUTEX mutex_move;
