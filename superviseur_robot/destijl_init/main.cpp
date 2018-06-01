@@ -126,10 +126,10 @@ void initStruct(void) {
         printf("Error semaphore create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_sem_create(&sem_position, NULL, 0, S_FIFO)) {
+    /*if (err = rt_sem_create(&sem_position, NULL, 0, S_FIFO)) {
         printf("Error semaphore create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
-    }
+    }*/
 
     /* Creation des taches */
     if (err = rt_task_create(&th_server, "th_server", 0, PRIORITY_TSERVER, 0)) {

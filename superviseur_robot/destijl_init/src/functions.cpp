@@ -6,8 +6,8 @@ void write_in_queue(RT_QUEUE *, MessageToMon);
 void send_compressed_img(Image *img);
 
 Camera cam; // /!\ STUPID
-Arene arene = NULL;
-Position pos = NULL;
+Arene arene;
+Position pos;
 bool arenaConfirmed = false;
 bool position = false;
 
@@ -181,9 +181,13 @@ void f_receiveFromMon(void *arg) {
                 arenaConfirmed = false;
                 rt_task_resume(&th_sendImage);
             }
-            else if (msg.data[0] = CAM_COMPUTE_POSITION){
-                printf("Monitor ask for Dumby position.\n");
+            else if (msg.data[0] == CAM_COMPUTE_POSITION){
+                printf("POSITION ON\n");
                 position = true;
+            }
+            else if (msg.data[0] == CAM_STOP_COMPUTE_POSITION){
+                printf("POSITION OFF\n");
+                position = false;
             }
         }
     } while (err > 0);
@@ -340,17 +344,15 @@ void f_sendImage(void *arg)
         get_image(&cam, &img);
         
         // Draw arena if confirmed
-        Image img2 = img.clone();
         if (arenaConfirmed)
-            draw_arena(&img, &img2, &arene);
+            draw_arena(&img, &img, &arene);
         
         if(position){
             detect_position(&img, &pos);
+            draw_position(&img, &img, &pos);
             send_message_to_monitor(HEADER_STM_POS, &pos);
-            draw_position(&img2, &img2, &pos);
         }
-        
-        send_compressed_img(&img2);
+        send_compressed_img(&img);
     }
 }
 
