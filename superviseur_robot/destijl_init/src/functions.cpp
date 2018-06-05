@@ -146,28 +146,27 @@ void f_receiveFromMon(void *arg) {
             }
             // Close camera
             else if (msg.data[0] == CAM_CLOSE) {
-                //send_message_to_monitor(HEADER_STM_ACK, NULL);
                 send_message_to_monitor(HEADER_STM_MES, "Closing camera...\n");
                 printf("Closing camera...\n");
                 close_camera(&cam);
             }
             // Ask arena
             else if (msg.data[0] == CAM_ASK_ARENA) {
-                //send_message_to_monitor(HEADER_STM_ACK, NULL);
                 send_message_to_monitor(HEADER_STM_MES, "Asking arena...\n");
                 printf("Asking arena...\n");
                 
                 // Get image
                 Image imgIn, imgOut;
                 get_image(&cam, &imgIn);
-                if (detect_arena(&imgIn, &arene) != 0) // TODO: global var!
+                if (detect_arena(&imgIn, &arene) != 0) { // TODO: don't use a global var!
                     printf("Failed detecting arena\n");
-                printf("Drawing arena...\n");
-                draw_arena(&imgIn, &imgOut, &arene);
-                send_compressed_img(&imgOut);
-
-                // Suspend sendImage task
-                rt_task_suspend(&th_sendImage);
+                } else {
+                    printf("Drawing arena...\n");
+                    draw_arena(&imgIn, &imgOut, &arene);
+                    send_compressed_img(&imgOut);  
+                    // Suspend sendImage task
+                    rt_task_suspend(&th_sendImage);
+                }
             }
             // Confirm arena
             else if (msg.data[0] == CAM_ARENA_CONFIRM) {
@@ -273,7 +272,9 @@ void f_battery(void  *arg){
     rt_task_set_periodic(NULL, TM_NOW, 500000000);
     
     while(1){
-        printf("Je suis là\n");
+#ifdef _WITH_TRACE
+        printf("Battery task\n");
+#endif
         rt_task_wait_period(NULL);
         int temp = 0;
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);

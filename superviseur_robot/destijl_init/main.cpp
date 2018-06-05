@@ -196,11 +196,11 @@ void startTasks() {
     if (err = rt_task_start(&th_openComRobot, &f_openComRobot, NULL)) {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
-    }/*
+    }
     if (err = rt_task_start(&th_move, &f_move, NULL)) {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
-    }*/
+    }
     if (err = rt_task_start(&th_battery, &f_battery, NULL)) {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
