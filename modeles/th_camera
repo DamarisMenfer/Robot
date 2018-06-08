@@ -1,3 +1,4 @@
+
 @startuml
 skinparam monochrome true
 start
@@ -18,10 +19,9 @@ while ()
 :evt?data;
 if (data) then (succed)
 :sauvegarderArene();
-:
 stop
 else (fail)
-endwhile
 stop
 endif
+endwhile
 @enduml
