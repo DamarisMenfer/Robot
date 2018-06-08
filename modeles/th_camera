@@ -1,4 +1,28 @@
+@startuml
+skinparam monochrome true
+start
+:start_period(100 ms);
+while ()
+:wait_next_period();
+:get_image(&cam, &img);
+if(arenaConfirmed) then (true)
+draw_arena(&img, &img, &arene);
+endif
+if(position) then (true)
+:detect_position(&img, &pos);
+:draw_position(&img, &img, &pos);
+:send_message_to_monitor(HEADER_STM_POS, &pos);
+endif
+send_compressed_img(&img);
+endwhile
+stop
+@enduml
 
+
+
+
+
+------------------ d'où ça sort ça ? xD
 @startuml
 skinparam monochrome true
 start

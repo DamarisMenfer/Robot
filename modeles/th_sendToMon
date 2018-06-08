@@ -2,10 +2,15 @@
 skinparam monochrome true
 start
 :serverOK?;
-while ()
+while (cptErr <= 50)
 :messageToMon?header,data;
 :err = send_message_to_monitor(header,data);
-if (err) then (<=)
+if (err) then (<= 0)
+:cptErr++;
+else
+:cptErr = 0;
+endif
+if (cptErr) then (> 50)
 :close_communication_robot();
 :kill_nodejs();
 :stop_camera();
